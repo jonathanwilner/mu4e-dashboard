@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+declare -A rsp
+rsp=( ["tag:unread"]=17 ["date:today..now"]=113 )
+
+logfile="$(dirname "$0")/mock.log"
+
+log() {
+  echo -n "$(date): $*" >>"$logfile"
+  echo >>"$logfile"
+}
+
+sanitize() {
+  local q="$1"
+  q=${q%\'}
+  q=${q#\'}
+  echo "$q"
+}
+
+command="$1"
+shift
+case "$command" in
+  count)
+    query=$(sanitize "$1")
+    count=${rsp[$query]:-0}
+    log "count $query => $count"
+    echo "$count"
+    ;;
+  search)
+    # Expect: search --format=text --output=threads --limit=<n> <query>
+    limit=0
+    query=""
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --limit=*)
+          limit=${1#*=}
+          ;;
+        --limit)
+          shift
+          limit=$1
+          ;;
+        --format=*|--output=*)
+          # ignore
+          ;;
+        *)
+          if [[ -z "$query" ]]; then
+            query=$(sanitize "$1")
+          fi
+          ;;
+      esac
+      shift
+    done
+    count=${rsp[$query]:-0}
+    if [[ $limit -le 0 ]]; then
+      limit=$count
+    fi
+    log "search $query limit=$limit => $count"
+    i=0
+    while test $i -lt $limit && test $i -lt $count; do
+      echo "thread:mock-$i"
+      i=$((i+1))
+    done
+    ;;
+  *)
+    log "unknown command $command"
+    ;;
+esac
