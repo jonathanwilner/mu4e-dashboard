@@ -35,89 +35,20 @@
 (require 'ob-shell)
 (require 'org)
 (require 'org-element)
+(require 'async)
 (require 'cl-lib)
-
-(defgroup notmuch-dashboard nil
-  "Provides a new Org mode link type for notmuch queries."
-  :group 'comm)
-
-(defcustom notmuch-dashboard-install-dependencies 'auto
-  "Automatically install notmuch-dashboard dependencies.
-
-The value can be one of:
-- nil: never attempt to install dependencies automatically.
-- \='auto: try `straight-use-package' when available, otherwise fall
-  back to package.el.
-- \='package: use package.el for installation.
-- \='straight: use straight.el for installation.
-
-When set to a non-nil value, missing dependencies are installed when
-`notmuch-dashboard' or `notmuch-dashboard-mode' are invoked."
-  :type '(choice (const :tag "Never" nil)
-                 (const :tag "Auto" auto)
-                 (const :tag "package.el" package)
-                 (const :tag "straight.el" straight)))
-
-(defcustom notmuch-dashboard-package-archives
-  '("https://elpa.gnu.org/packages/" "https://melpa.org/packages/")
-  "Package archives consulted when installing dependencies."
-  :type '(repeat string))
-
-(defun notmuch-dashboard--install-using-package (pkg)
-  "Install PKG with package.el if possible."
-  (require 'package)
-  (let* ((package-archives
-          (mapcar (lambda (url)
-                    (cons (file-name-base (directory-file-name url)) url))
-                  notmuch-dashboard-package-archives))
-         (package-user-dir (or package-user-dir
-                               (expand-file-name "notmuch-dashboard-elpa" user-emacs-directory))))
-    (package-initialize)
-    (unless package-archive-contents
-      (package-refresh-contents))
-    (unless (package-installed-p pkg)
-      (package-install pkg)))
-  (require pkg))
-
-(defun notmuch-dashboard--install-using-straight (pkg)
-  "Install PKG with straight.el if available."
-  (when (fboundp 'straight-use-package)
-    (straight-use-package pkg)
-    (require pkg)))
-
-(defun notmuch-dashboard--install-dependency (pkg)
-  "Ensure PKG is available, optionally installing it."
-  (or (require pkg nil 'noerror)
-      (pcase notmuch-dashboard-install-dependencies
-        ('auto (or (notmuch-dashboard--install-using-straight pkg)
-                   (notmuch-dashboard--install-using-package pkg)))
-        ('package (notmuch-dashboard--install-using-package pkg)
-                  (require pkg))
-        ('straight (notmuch-dashboard--install-using-straight pkg))
-        (_ nil))))
-
-(mapc #'notmuch-dashboard--install-dependency '(async notmuch))
+(require 'notmuch)
 
 (defconst notmuch-dashboard-version "0.1.1")
 
 ;; Install the notmuch link type
+(defgroup notmuch-dashboard nil
+  "Provides a new Org mode link type for notmuch queries."
+  :group 'comm)
+
 (defcustom notmuch-dashboard-file "~/.emacs.d/notmuch-dashboard.org"
   "Path to the dashboard org file."
   :type 'string)
-
-(defcustom notmuch-dashboard-template-file
-  (let ((default-directory (file-name-directory (or load-file-name buffer-file-name))))
-    (expand-file-name "dashboard.org" default-directory))
-  "Template file used to bootstrap a dashboard when none exists."
-  :type 'file)
-
-(defcustom notmuch-dashboard-template-contents
-  "* Mailboxes\n\n[[nm:tag:unread][Unread]]\n[[nm:date:today..now][Today]]\n"
-  "Fallback contents used when no template file is available."
-  :type 'string)
-
-(defvar notmuch-saved-searches nil
-  "List of saved searches provided by notmuch.")
 
 (defcustom notmuch-dashboard-link-name "nm"
   "Default link name."
@@ -188,23 +119,11 @@ buffer is in the process of being updated asynchronously.")
 (defun notmuch-dashboard ()
   "Open the dashboard (using notmuch-dashboard-file)."
   (interactive)
-  (notmuch-dashboard--install-dependency 'notmuch)
-  (notmuch-dashboard--install-dependency 'async)
-  (notmuch-dashboard--ensure-dashboard-file notmuch-dashboard-file)
-  (find-file notmuch-dashboard-file)
-  (notmuch-dashboard-mode))
-
-(defun notmuch-dashboard--ensure-dashboard-file (path)
-  "Ensure PATH exists, creating it from a template if necessary."
-  (unless (file-exists-p path)
-    (make-directory (file-name-directory (expand-file-name path)) t)
-    (let ((template (when (and notmuch-dashboard-template-file
-                               (file-readable-p notmuch-dashboard-template-file))
-                      (with-temp-buffer
-                        (insert-file-contents notmuch-dashboard-template-file)
-                        (buffer-string)))))
-      (with-temp-file path
-        (insert (or template notmuch-dashboard-template-contents))))))
+  (if (file-exists-p notmuch-dashboard-file)
+      (progn
+        (find-file notmuch-dashboard-file)
+        (notmuch-dashboard-mode))
+    (message (concat notmuch-dashboard-file " does not exist"))))
 
 (defun notmuch-dashboard-compare-saved-search (saved-search field-name st)
   "Compare ST to the field FIELD-NAME in the SAVED-SEARCH."

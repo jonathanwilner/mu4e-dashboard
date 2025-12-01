@@ -15,13 +15,8 @@ dashboard by simply writing an org file as shown below:
 
 ** Installation
 
-Evaluate the buffer and you're good to go. If the default
-=notmuch-dashboard-file= does not exist, =notmuch-dashboard= will
-bootstrap it from =dashboard.org= (or a small built-in template).
-
-Dependencies (notmuch, async) are resolved automatically: if
-~straight-use-package~ is available it will be used, otherwise package.el
-will install missing packages from the default ELPA archives.
+Evaluate the buffer and you're good to go. It is your responsibility to
+write an org file with links pointing to various queries on your mailboxes.
 
 ** Configuration
 

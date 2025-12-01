@@ -54,25 +54,6 @@
       (goto-char (org-element-property :contents-begin link))
       (should (looking-at "17")))))
 
-(ert-deftest dashboard-creation-bootstraps-template ()
-  "Ensure the dashboard command creates a template when missing."
-  (let* ((temporary-file-directory (format "%s/test" (getenv "srcdir")))
-         (notmuch-dashboard-file (make-temp-file "nmdash" nil ".org"))
-         (dashboard-template "* Mailboxes\n[[nm:tag:unread][Unread]]\n"))
-    (delete-file notmuch-dashboard-file)
-    (setq notmuch-dashboard-template-contents dashboard-template)
-    (notmuch-dashboard)
-    (unwind-protect
-        (progn
-          (should (file-exists-p notmuch-dashboard-file))
-          (should (bound-and-true-p notmuch-dashboard-mode))
-          (with-current-buffer (find-file-noselect notmuch-dashboard-file)
-            (should (string-match "Unread" (buffer-string)))))
-      (when (get-file-buffer notmuch-dashboard-file)
-        (kill-buffer (get-file-buffer notmuch-dashboard-file)))
-      (when (file-exists-p notmuch-dashboard-file)
-        (delete-file notmuch-dashboard-file)))))
-
 (ert-deftest limited-query-uses-threads ()
   "Verify limited queries honor the requested thread cap."
   (let (limited-query)
