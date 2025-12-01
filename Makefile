@@ -1,6 +1,6 @@
 .POSIX:
 
-EMACS = emacs
+EMACS ?= emacs
 EVAL := $(EMACS) --eval
 NOTMUCH_DIR := $(shell find /usr/share/emacs/site-lisp/elpa-src -maxdepth 1 -name 'notmuch-*' -type d 2>/dev/null | sort | tail -n 1)
 ASYNC_VENDOR_DIR := $(shell find /usr/share/emacs/site-lisp/elpa-src -maxdepth 1 -name 'async-*' -type d 2>/dev/null | sort | tail -n 1)
@@ -47,7 +47,7 @@ all: lints $(ELISP:.el=.elc)
 lints: checkdoc
 
 checkdoc:
-	for f in $(ELISP); do $(EMACS) -batch -Q --eval "(checkdoc-file \"$$f\")"; done
+	for f in $(ELISP); do $(EMACS) -batch -Q $(LOADPATH) --eval "(checkdoc-file \"$$f\")"; done
 
 check: all
 	srcdir=$(PWD) $(EMACS) -batch -Q $(LOADPATH) -l test/regression-tests.el -f ert-run-tests-batch
